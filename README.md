@@ -4,6 +4,8 @@ Bring [MineralRightsXchange.com](https://mineralrightsxchange.com/?utm_source=gi
 
 **No MRX account or API key. Read-only. No customer records.**
 
+Official MCP Registry: [`io.github.underwriter-MRX/mrx-mcp`](https://registry.modelcontextprotocol.io/v0.1/servers/io.github.underwriter-MRX%2Fmrx-mcp/versions/0.2.0). Published and verified September 23, 2026.
+
 ## Connect to the hosted MCP
 
 Endpoint: **https://mrx-public-mcp.vercel.app/mcp**
