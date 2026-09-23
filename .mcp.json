@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "mrx-public": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/underwriter-MXC/mrx-mcp.git@v0.1.0",
+        "mrx-mcp"
+      ]
+    }
+  }
+}
