@@ -63,7 +63,7 @@ class SecurityTests(unittest.TestCase):
                 d.verify_page({"url": URL, "sha256": d.content_hash(body)}, robots())
         with patch.object(d, "get", return_value=({"X-Robots-Tag": "noindex"}, HTML)), self.assertRaises(ValueError):
             d.verify_page({"url": URL, "sha256": d.content_hash(HTML)}, robots())
-        blocked = robots()
+        blocked = RobotFileParser()
         blocked.parse(["User-agent: *", "Disallow: /"])
         with self.assertRaises(ValueError):
             d.verify_page({"url": URL, "sha256": d.content_hash(HTML)}, blocked)
@@ -81,8 +81,9 @@ class SecurityTests(unittest.TestCase):
 
     def test_search_limits_labels_and_cache_fail_closed(self):
         manifest = {"pages": [{"url": URL}], "content_revision": "fixture"}
-        with patch.object(s, "inventory", return_value=(manifest, robots())):
-            self.assertEqual(s.mrx_search_guides("example", 1)["results"][0]["url_label"], "example")
+        from mrx_mcp import retrieval
+        with patch.object(retrieval, "corpus", return_value=([], {"complete": True})):
+            self.assertEqual(s.mrx_search_guides("example", 1)["results"], [])
             for query, limit in [("", 1), ("a" * 201, 1), ("x", 21), ("x", 0), ("???", 1)]:
                 with self.assertRaises(ValueError):
                     s.mrx_search_guides(query, limit)

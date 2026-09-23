@@ -12,7 +12,8 @@ async def main():
         async with ClientSession(read, write, read_timeout_seconds=180) as session:
             init = await session.initialize()
             tools = (await session.list_tools()).tools
-            assert sorted(t.name for t in tools) == ["mrx_get_started", "mrx_read_page", "mrx_search_guides", "mrx_status"]
+            assert sorted(t.name for t in tools) == ["fetch", "mrx_get_started", "mrx_read_page", "mrx_search_guides", "mrx_status", "search"]
+            assert all(t.output_schema for t in tools if t.name in {"search", "fetch"})
             assert all(t.annotations.read_only_hint and not t.annotations.destructive_hint for t in tools)
             assert len((await session.list_resources()).resources) == 1
             assert len((await session.list_prompts()).prompts) == 1
