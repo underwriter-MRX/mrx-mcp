@@ -1,0 +1,31 @@
+name: Publish official MCP Registry listing
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main' && github.repository == 'underwriter-MRX/mrx-mcp'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install .
+      - run: python -m unittest discover -s tests -v
+      - run: python tests/protocol_smoke.py
+      - name: Install pinned official publisher
+        run: |
+          curl --fail --location --retry 3 --output mcp-publisher.tar.gz https://github.com/modelcontextprotocol/registry/releases/download/v1.8.1/mcp-publisher_linux_amd64.tar.gz
+          echo 'a06c9096dcb9727c13555b6be26c7effa707b01f06a4c561ba7a3635443cf2cc  mcp-publisher.tar.gz' | sha256sum --check
+          tar -xzf mcp-publisher.tar.gz mcp-publisher
+      - name: Authenticate this repository identity
+        run: ./mcp-publisher login github-oidc
+      - name: Publish verified remote metadata
+        run: |
+          cp docs/server.json server.json
+          ./mcp-publisher publish
