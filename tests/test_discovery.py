@@ -86,7 +86,7 @@ class SecurityTests(unittest.TestCase):
             for query, limit in [("", 1), ("a" * 201, 1), ("x", 21), ("x", 0), ("???", 1)]:
                 with self.assertRaises(ValueError):
                     s.mrx_search_guides(query, limit)
-        with patch.object(s, "_cache", (manifest, robots())), patch.object(s, "_cache_at", 0), patch.object(d, "discovery", side_effect=ValueError("offline")):
+        with patch.object(s, "_cache", (manifest, robots())), patch.object(s, "_cache_at", s.time.monotonic() - 61), patch.object(d, "discovery", side_effect=ValueError("offline")):
             with self.assertRaises(ValueError):
                 s.inventory()
             self.assertIsNone(s._cache)
