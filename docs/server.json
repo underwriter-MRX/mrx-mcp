@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.underwriter-MRX/mrx-mcp",
+  "title": "MRX Public MCP",
+  "description": "Read-only, source-linked mineral-rights education from MineralRightsXchange.com.",
+  "repository": {
+    "url": "https://github.com/underwriter-MRX/mrx-mcp",
+    "source": "github"
+  },
+  "version": "0.2.0",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "mrx-public-mcp",
+      "version": "0.2.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}
