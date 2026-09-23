@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "mrx-public-mcp"
-version = "0.1.0"
+version = "0.2.0"
 description = "Read-only, source-linked access to MineralRightsXchange.com public guides through MCP"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,11 +15,12 @@ keywords = ["mcp", "mineral-rights", "royalties", "model-context-protocol"]
 
 [project.urls]
 Homepage = "https://mineralrightsxchange.com/"
-Repository = "https://github.com/underwriter-MXC/mrx-mcp"
-Issues = "https://github.com/underwriter-MXC/mrx-mcp/issues"
+Repository = "https://github.com/underwriter-MRX/mrx-mcp"
+Issues = "https://github.com/underwriter-MRX/mrx-mcp/issues"
 
 [project.scripts]
 mrx-mcp = "mrx_mcp.server:main"
+mrx-mcp-http = "mrx_mcp.http:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mrx_mcp"]
