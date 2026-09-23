@@ -216,14 +216,104 @@ def content_hash(body):
 
 def verify_page(entry, robots):
     url = entry['url']
-    if not robots.can_fetch('bingbot', url):
-        raise ValueError('bingbot is blocked by robots.txt.')
+    if not robots.can_fetch('bingbot', url) or not robots.can_fetch(USER_AGENT, url):
+        raise ValueError('Public retrieval crawler is blocked by robots.txt.')
     headers, body = get(url, ['text/html'])
     if content_hash(body) != entry['sha256']:
         raise ValueError('Live HTML differs from the published manifest; retry after cache/deployment convergence.')
     parsed = Page()
     parsed.feed(body.decode('utf-8'))
+    parsed.source_context = source_context(body.decode('utf-8'))
     xrobots = ' '.join(v for k, v in headers.items() if k.lower() == 'x-robots-tag')
     if parsed.canonicals != [url] or parsed.noindex or parsed.refresh or re.search(r'\b(noindex|none)\b', xrobots, re.I):
         raise ValueError('Live page is noncanonical, noindex, or a redirect.')
     return parsed
+
+class SourceContent(HTMLParser):
+    """Extract semantic public content; CSS rendering is not inferred."""
+    VOID = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
+
+    def __init__(self):
+        super().__init__()
+        self.stack = []
+        self.blocks = []
+        self.main_blocks = []
+        self.sections = []
+        self.metadata = []
+        self.jsonld = []
+        self.script = None
+        self.heading = None
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        hidden = (any(x[1] for x in self.stack) or tag in ('script', 'style', 'noscript', 'nav', 'footer', 'template')
+                  or 'hidden' in a or a.get('aria-hidden', '').lower() == 'true'
+                  or bool(re.search(r'(?:display\s*:\s*none|visibility\s*:\s*hidden)', a.get('style', ''), re.I)))
+        if tag not in self.VOID:
+            self.stack.append((tag, hidden))
+        if tag == 'script' and a.get('type', '').lower() == 'application/ld+json':
+            self.script = []
+        if tag in ('h1', 'h2', 'h3', 'h4') and not hidden:
+            self.heading = {'level': int(tag[1]), 'title': '', 'anchor': a.get('id'), 'text': ''}
+            self.sections.append(self.heading)
+        if tag == 'meta':
+            key = (a.get('property') or a.get('name') or '').lower()
+            if key in ('author', 'article:published_time', 'article:modified_time') and a.get('content'):
+                self.metadata.append({'field': key, 'value': a['content'], 'provenance': 'html_meta'})
+        if tag == 'time' and not hidden and a.get('datetime'):
+            self.metadata.append({'field': 'time', 'value': a['datetime'], 'provenance': 'html_time', 'meaning': 'unspecified'})
+
+    def handle_endtag(self, tag):
+        if tag == 'script' and self.script is not None:
+            try:
+                self.jsonld.append(json.loads(''.join(self.script)))
+            except (ValueError, TypeError):
+                pass
+            self.script = None
+        if self.heading is not None and tag in ('h1', 'h2', 'h3', 'h4'):
+            self.heading = None
+        for index in range(len(self.stack) - 1, -1, -1):
+            if self.stack[index][0] == tag:
+                del self.stack[index:]
+                break
+
+    def handle_data(self, value):
+        if self.script is not None:
+            self.script.append(value)
+        if any(x[1] for x in self.stack) or not value.strip():
+            return
+        text = ' '.join(value.split())
+        self.blocks.append(text)
+        in_main = any(x[0] in ('main', 'article') for x in self.stack)
+        if in_main:
+            self.main_blocks.append(text)
+        if self.heading is not None:
+            self.heading['title'] += (' ' if self.heading['title'] else '') + text
+        elif self.sections:
+            self.sections[-1]['text'] += (' ' if self.sections[-1]['text'] else '') + text
+
+    def result(self):
+        def walk(value):
+            if isinstance(value, list):
+                for item in value:
+                    yield from walk(item)
+            elif isinstance(value, dict):
+                types = value.get('@type', [])
+                if isinstance(types, str):
+                    types = [types]
+                if any(t in ('Article', 'BlogPosting', 'NewsArticle', 'ScholarlyArticle', 'WebPage') for t in types):
+                    for key in ('datePublished', 'dateModified', 'author', 'reviewedBy', 'lastReviewed'):
+                        if key in value:
+                            yield {'field': key, 'value': value[key], 'provenance': 'json_ld', 'schema_type': types}
+                yield from walk(value.get('@graph', []))
+                yield from walk(value.get('mainEntity', []))
+        return {'text': '\n'.join(self.main_blocks or self.blocks),
+                'text_scope': 'main_or_article' if self.main_blocks else 'document_without_navigation',
+                'sections': self.sections, 'source_metadata': self.metadata + list(walk(self.jsonld)),
+                'metadata_note': 'Source-attributed values, not independently verified authorship, review, or freshness.'}
+
+
+def source_context(html):
+    parser = SourceContent()
+    parser.feed(html)
+    return parser.result()
