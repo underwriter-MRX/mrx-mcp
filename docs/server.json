@@ -8,14 +8,10 @@
     "source": "github"
   },
   "version": "0.2.0",
-  "packages": [
+  "remotes": [
     {
-      "registryType": "pypi",
-      "identifier": "mrx-public-mcp",
-      "version": "0.2.0",
-      "transport": {
-        "type": "stdio"
-      }
+      "type": "streamable-http",
+      "url": "https://mrx-public-mcp.vercel.app/mcp"
     }
   ]
 }
